@@ -1,7 +1,7 @@
 // Main application entry point
-// Bootstraps the 3D game and connects all modules
+// Bootstraps the game and connects all modules
+// NOTE: This is Phase 1 - Local game only. 3D rendering (render.ts) will be added in Phase 2.
 
-import { initScene, renderGameState, showDamageEffect, showHealEffect } from './render';
 import { createInitialGame, playCard, endTurn, canPlayCard } from './gameModel';
 import type { GameState, CardType } from './gameModel';
 
@@ -11,14 +11,10 @@ let uiElements: {
   gameUI: HTMLElement;
   gameOver: HTMLElement;
   btnHost: HTMLButtonElement;
-  btnJoin: HTMLButtonElement;
   btnAttack: HTMLButtonElement;
   btnDefend: HTMLButtonElement;
   btnHeal: HTMLButtonElement;
   btnRestart: HTMLButtonElement;
-  peerIdDisplay: HTMLElement;
-  copyHint: HTMLElement;
-  friendIdInput: HTMLInputElement;
   connectionStatus: HTMLElement;
   p1HpFill: HTMLElement;
   p1HpText: HTMLElement;
@@ -48,12 +44,6 @@ function initApp(): void {
   
   // Setup event listeners
   setupEventListeners();
-  
-  // Initialize Babylon.js scene
-  const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
-  if (canvas) {
-    initScene(canvas);
-  }
 
   // Show connection UI initially
   showConnectionUI();
@@ -68,14 +58,10 @@ function cacheUIElements(): void {
     gameUI: document.getElementById('game-ui')!,
     gameOver: document.getElementById('game-over')!,
     btnHost: document.getElementById('btn-host') as HTMLButtonElement,
-    btnJoin: document.getElementById('btn-join') as HTMLButtonElement,
     btnAttack: document.getElementById('btn-attack') as HTMLButtonElement,
     btnDefend: document.getElementById('btn-defend') as HTMLButtonElement,
     btnHeal: document.getElementById('btn-heal') as HTMLButtonElement,
     btnRestart: document.getElementById('btn-restart') as HTMLButtonElement,
-    peerIdDisplay: document.getElementById('peer-id-display')!,
-    copyHint: document.getElementById('copy-hint')!,
-    friendIdInput: document.getElementById('friend-id-input') as HTMLInputElement,
     connectionStatus: document.getElementById('connection-status')!,
     p1HpFill: document.getElementById('p1-hp-fill')!,
     p1HpText: document.getElementById('p1-hp-text')!,
@@ -96,9 +82,8 @@ function cacheUIElements(): void {
  * Setup all event listeners
  */
 function setupEventListeners(): void {
-  // Connection buttons
+  // Start button
   uiElements.btnHost?.addEventListener('click', () => startLocalGame('player1'));
-  uiElements.btnJoin?.addEventListener('click', () => startLocalGame('player2'));
 
   // Card buttons
   uiElements.btnAttack?.addEventListener('click', () => playCardAction('attack'));
@@ -110,21 +95,16 @@ function setupEventListeners(): void {
 }
 
 /**
- * Start a local game (for testing without networking)
+ * Start a local game
  */
 function startLocalGame(playerId: 'player1' | 'player2'): void {
   myPlayerId = playerId;
   gameState = createInitialGame();
   
-  // For local testing, always start with player 1
-  // In real P2P, the host would be player 1
-  gameState = createInitialGame();
-  
   showGameUI();
   updateUI();
-  renderGameState(gameState);
   
-  uiElements.connectionStatus.textContent = `Local game started. You are ${playerId}`;
+  uiElements.connectionStatus.textContent = `Local game started. Player 1 goes first!`;
 }
 
 /**
@@ -141,19 +121,10 @@ function playCardAction(cardType: CardType): void {
 
   try {
     // Apply the card
-    const previousHp = gameState.players[getOpponentId(myPlayerId)].hp;
     gameState = playCard(gameState, myPlayerId, cardType);
     
-    // Show visual effects
-    if (cardType === 'attack') {
-      showDamageEffect(getOpponentId(myPlayerId));
-    } else if (cardType === 'heal') {
-      showHealEffect(myPlayerId);
-    }
-
-    // Update UI and render
+    // Update UI
     updateUI();
-    renderGameState(gameState);
 
     // Check if game ended
     if (gameState.gameOver) {
@@ -166,12 +137,11 @@ function playCardAction(cardType: CardType): void {
       if (gameState && !gameState.gameOver) {
         gameState = endTurn(gameState);
         updateUI();
-        renderGameState(gameState);
       }
     }, 1000);
 
   } catch (error) {
-    uiElements.connectionStatus.textContent = `Error: ${error.message}`;
+    uiElements.connectionStatus.textContent = `Error: ${(error as Error).message}`;
   }
 }
 
@@ -273,7 +243,6 @@ function restartGame(): void {
   gameState = createInitialGame();
   showGameUI();
   updateUI();
-  renderGameState(gameState);
   uiElements.connectionStatus.textContent = 'Game restarted!';
 }
 

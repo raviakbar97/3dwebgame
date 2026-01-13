@@ -196,24 +196,16 @@
     <canvas id="renderCanvas"></canvas>
     
     <div id="ui-overlay">
-        <!-- Connection UI -->
+        <!-- Start UI -->
         <div id="connection-ui">
             <h2>3D PvP Card Game - Alpha</h2>
-            <p>Start a game or join a friend</p>
+            <p>Local 2-Player Game (Phase 1)</p>
             
             <div id="host-section">
-                <button id="btn-host">Host Game</button>
-                <div id="peer-id-display" class="hidden"></div>
-                <p id="copy-hint" class="hidden">Share this ID with your friend</p>
+                <button id="btn-host">Start Local Game</button>
             </div>
 
-            <div id="join-section">
-                <input type="text" id="friend-id-input" placeholder="Enter friend's Peer ID">
-                <br>
-                <button id="btn-join">Join Game</button>
-            </div>
-
-            <div id="connection-status" style="margin-top: 10px; color: #888;"></div>
+            <div id="connection-status" style="margin-top: 10px; color: #888;">Click above to start</div>
         </div>
 
         <!-- Game HUD (hidden until game starts) -->
@@ -253,9 +245,6 @@
         </div>
     </div>
 
-    <!-- Babylon.js CDN -->
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    
     <!-- Note: Actual game logic will be loaded via ES modules in development -->
     <script type="module" src="/src/main.ts"></script>
 </body>
