@@ -9,9 +9,15 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            font-family: Arial, sans-serif;
-            background: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
+        }
+
+        /* Animated background particles */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
         }
         
         #renderCanvas {
@@ -32,20 +38,41 @@
 
         .hud {
             position: absolute;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
             pointer-events: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .hud:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
         }
 
         #player1-hud {
             top: 20px;
             left: 20px;
+            border-left: 4px solid #4a90e2;
         }
 
         #player2-hud {
             top: 20px;
             right: 20px;
+            border-right: 4px solid #e24a4a;
+        }
+
+        #player1-hud.active {
+            border-left-color: #00ff88;
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
+        }
+
+        #player2-hud.active {
+            border-right-color: #00ff88;
+            box-shadow: 0 0 20px rgba(226, 74, 74, 0.6);
         }
 
         #turn-indicator {
@@ -54,6 +81,34 @@
             transform: translateX(-50%);
             font-size: 18px;
             font-weight: bold;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 25px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #turn-indicator.p1-turn {
+            border-color: #4a90e2;
+            color: #4a90e2;
+            animation: pulse-p1 2s infinite;
+        }
+
+        #turn-indicator.p2-turn {
+            border-color: #e24a4a;
+            color: #e24a4a;
+            animation: pulse-p2 2s infinite;
+        }
+
+        @keyframes pulse-p1 {
+            0%, 100% { box-shadow: 0 0 10px rgba(74, 144, 226, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(74, 144, 226, 0.8); }
+        }
+
+        @keyframes pulse-p2 {
+            0%, 100% { box-shadow: 0 0 10px rgba(226, 74, 74, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(226, 74, 74, 0.8); }
         }
 
         #card-buttons {
@@ -65,130 +120,433 @@
         }
 
         .card-btn {
-            padding: 15px 25px;
+            padding: 18px 30px;
             font-size: 16px;
             font-weight: bold;
-            border: 2px solid #444;
-            background: #222;
+            border: 2px solid;
+            background: rgba(20, 20, 20, 0.9);
             color: white;
             cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.2s;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .card-btn:hover:not(:disabled)::before {
+            left: 100%;
         }
 
         .card-btn:hover:not(:disabled) {
-            background: #333;
-            border-color: #666;
-            transform: translateY(-2px);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-btn:active:not(:disabled) {
+            transform: translateY(-1px) scale(1.02);
         }
 
         .card-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
+            transform: scale(0.95);
         }
 
-        .card-btn.attack { border-color: #ff4444; }
-        .card-btn.defend { border-color: #4444ff; }
-        .card-btn.heal { border-color: #44ff44; }
+        .card-btn.attack { 
+            border-color: #ff4444; 
+            background: rgba(255, 68, 68, 0.1);
+        }
+        .card-btn.attack:hover:not(:disabled) {
+            background: rgba(255, 68, 68, 0.2);
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+        }
+
+        .card-btn.defend { 
+            border-color: #4444ff; 
+            background: rgba(68, 68, 255, 0.1);
+        }
+        .card-btn.defend:hover:not(:disabled) {
+            background: rgba(68, 68, 255, 0.2);
+            box-shadow: 0 0 20px rgba(68, 68, 255, 0.4);
+        }
+
+        .card-btn.heal { 
+            border-color: #44ff44; 
+            background: rgba(68, 255, 68, 0.1);
+        }
+        .card-btn.heal:hover:not(:disabled) {
+            background: rgba(68, 255, 68, 0.2);
+            box-shadow: 0 0 20px rgba(68, 255, 68, 0.4);
+        }
 
         #game-over {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 40px;
-            border-radius: 10px;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 20px;
             text-align: center;
             display: none;
             pointer-events: auto;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        #game-over.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
         }
 
         #game-over h1 {
-            font-size: 48px;
+            font-size: 64px;
             margin: 0 0 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        #game-over.victory h1 {
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        }
+
+        #game-over.defeat h1 {
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.6);
+        }
+
+        #game-over.draw h1 {
+            color: #ffaa00;
+            text-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
+        }
+
+        #game-over p {
+            font-size: 20px;
+            margin: 0 0 30px 0;
+            color: #ccc;
+            animation: fadeIn 0.8s ease-out 0.3s both;
         }
 
         #game-over button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 15px 40px;
+            font-size: 18px;
             cursor: pointer;
-            background: #444;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 30px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            animation: fadeIn 0.8s ease-out 0.6s both;
+        }
+
+        #game-over button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .hp-bar {
-            width: 150px;
-            height: 20px;
-            background: #333;
-            border-radius: 10px;
+            width: 160px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
             overflow: hidden;
-            margin: 5px 0;
+            margin: 8px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
         }
 
         .hp-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ff4444, #ff8844);
-            transition: width 0.3s;
+            background: linear-gradient(90deg, #ff4444, #ff8844, #ffaa00);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hp-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .hp-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 1;
         }
 
         .energy {
-            font-size: 14px;
+            font-size: 16px;
             color: #ffaa00;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 5px 0;
+        }
+
+        .energy::before {
+            content: '⚡';
+            font-size: 18px;
         }
 
         .defend-active {
             color: #4444ff;
             font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            animation: shield-pulse 1.5s infinite;
         }
+
+        .defend-active::before {
+            content: '🛡️';
+            font-size: 16px;
+        }
+
+        @keyframes shield-pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .player-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-name.p1 { color: #4a90e2; }
+        .player-name.p2 { color: #e24a4a; }
 
         #connection-ui {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 30px;
-            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 20px;
             text-align: center;
             pointer-events: auto;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            min-width: 400px;
         }
 
-        #connection-ui input {
-            padding: 10px;
-            margin: 10px 0;
-            width: 200px;
-            font-size: 14px;
+        #connection-ui h2 {
+            font-size: 36px;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+
+        #connection-ui p {
+            color: #aaa;
+            margin: 0 0 25px 0;
+            font-size: 16px;
         }
 
         #connection-ui button {
-            padding: 10px 20px;
-            margin: 5px;
+            padding: 15px 40px;
+            margin: 10px;
             cursor: pointer;
-            background: #444;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 14px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
         #connection-ui button:hover {
-            background: #666;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
         }
 
-        #peer-id-display {
-            font-family: monospace;
-            background: #111;
+        #connection-ui button:active {
+            transform: translateY(0) scale(1.02);
+        }
+
+        #connection-status {
+            margin-top: 20px;
             padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-            user-select: all;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 14px;
+            min-height: 20px;
+            transition: all 0.3s;
+        }
+
+        #connection-status.success {
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        #connection-status.error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        #connection-status.info {
+            color: #4a90e2;
+            background: rgba(74, 144, 226, 0.1);
         }
 
         .hidden {
             display: none !important;
+        }
+
+        /* Message/Notification Area */
+        #message-area {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            text-align: center;
+        }
+
+        #message-area.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #message-area.success {
+            color: #00ff88;
+            border-color: #00ff88;
+        }
+
+        #message-area.error {
+            color: #ff4444;
+            border-color: #ff4444;
+        }
+
+        #message-area.info {
+            color: #4a90e2;
+            border-color: #4a90e2;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Turn transition overlay */
+        #turn-transition {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        #turn-transition.show {
+            opacity: 1;
+        }
+
+        #turn-transition.p1 {
+            color: #4a90e2;
+            text-shadow: 0 0 30px rgba(74, 144, 226, 0.8);
+        }
+
+        #turn-transition.p2 {
+            color: #e24a4a;
+            text-shadow: 0 0 30px rgba(226, 74, 74, 0.8);
         }
     </style>
 </head>
@@ -198,50 +556,59 @@
     <div id="ui-overlay">
         <!-- Start UI -->
         <div id="connection-ui">
-            <h2>3D PvP Card Game - Alpha</h2>
-            <p>Local 2-Player Game (Phase 1)</p>
+            <h2>⚔️ 3D PvP Card Game</h2>
+            <p>Phase 3: Complete Local Experience</p>
             
             <div id="host-section">
                 <button id="btn-host">Start Local Game</button>
             </div>
 
-            <div id="connection-status" style="margin-top: 10px; color: #888;">Click above to start</div>
+            <div id="connection-status" class="info">Click above to start</div>
         </div>
 
         <!-- Game HUD (hidden until game starts) -->
         <div id="game-ui" class="hidden">
             <div id="player1-hud" class="hud">
-                <div><strong>Player 1</strong></div>
-                <div class="hp-bar"><div class="hp-fill" id="p1-hp-fill"></div></div>
-                <div id="p1-hp-text">HP: 100</div>
-                <div class="energy" id="p1-energy">Energy: 3</div>
+                <div class="player-name p1">🔵 Player 1</div>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="p1-hp-fill"></div>
+                    <div class="hp-text" id="p1-hp-text">100/100</div>
+                </div>
+                <div class="energy" id="p1-energy">3</div>
                 <div id="p1-defend"></div>
             </div>
 
             <div id="player2-hud" class="hud">
-                <div><strong>Player 2</strong></div>
-                <div class="hp-bar"><div class="hp-fill" id="p2-hp-fill"></div></div>
-                <div id="p2-hp-text">HP: 100</div>
-                <div class="energy" id="p2-energy">Energy: 3</div>
+                <div class="player-name p2">🔴 Player 2</div>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="p2-hp-fill"></div>
+                    <div class="hp-text" id="p2-hp-text">100/100</div>
+                </div>
+                <div class="energy" id="p2-energy">3</div>
                 <div id="p2-defend"></div>
             </div>
 
             <div id="turn-indicator" class="hud">
-                Turn: <span id="turn-number">1</span> - <span id="current-player">Player 1</span>
+                <span id="turn-prefix">Turn</span>: <span id="turn-number">1</span> - <span id="current-player">Player 1</span>
             </div>
 
             <div id="card-buttons" class="hud">
-                <button class="card-btn attack" id="btn-attack">Attack</button>
-                <button class="card-btn defend" id="btn-defend">Defend</button>
-                <button class="card-btn heal" id="btn-heal">Heal</button>
+                <button class="card-btn attack" id="btn-attack">⚔️ Attack</button>
+                <button class="card-btn defend" id="btn-defend">🛡️ Defend</button>
+                <button class="card-btn heal" id="btn-heal">💚 Heal</button>
             </div>
+
+            <div id="message-area"></div>
         </div>
+
+        <!-- Turn Transition Overlay -->
+        <div id="turn-transition"></div>
 
         <!-- Game Over Screen -->
         <div id="game-over">
             <h1 id="game-result">Victory!</h1>
             <p id="game-message">Game Over</p>
-            <button id="btn-restart">Play Again</button>
+            <button id="btn-restart">🔄 Play Again</button>
         </div>
     </div>
 
