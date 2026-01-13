@@ -1,6 +1,6 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   roots: ['<rootDir>/tests', '<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: [
@@ -18,5 +18,9 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
-  }
+  },
+  // Mock Babylon.js for tests
+  transformIgnorePatterns: [
+    'node_modules/(?!(babylonjs)/)'
+  ]
 };
