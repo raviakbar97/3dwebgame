@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D PvP Card Game - Alpha</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hud {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: auto;
+        }
+
+        #player1-hud {
+            top: 20px;
+            left: 20px;
+        }
+
+        #player2-hud {
+            top: 20px;
+            right: 20px;
+        }
+
+        #turn-indicator {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #card-buttons {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .card-btn {
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #444;
+            background: #222;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .card-btn:hover:not(:disabled) {
+            background: #333;
+            border-color: #666;
+            transform: translateY(-2px);
+        }
+
+        .card-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .card-btn.attack { border-color: #ff4444; }
+        .card-btn.defend { border-color: #4444ff; }
+        .card-btn.heal { border-color: #44ff44; }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+        }
+
+        #game-over h1 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+        }
+
+        #game-over button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .hp-bar {
+            width: 150px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff8844);
+            transition: width 0.3s;
+        }
+
+        .energy {
+            font-size: 14px;
+            color: #ffaa00;
+        }
+
+        .defend-active {
+            color: #4444ff;
+            font-weight: bold;
+        }
+
+        #connection-ui {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        #connection-ui input {
+            padding: 10px;
+            margin: 10px 0;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        #connection-ui button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        #connection-ui button:hover {
+            background: #666;
+        }
+
+        #peer-id-display {
+            font-family: monospace;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            user-select: all;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    
+    <div id="ui-overlay">
+        <!-- Start UI -->
+        <div id="connection-ui">
+            <h2>3D PvP Card Game - Alpha</h2>
+            <p>Local 2-Player Game (Phase 1)</p>
+            
+            <div id="host-section">
+                <button id="btn-host">Start Local Game</button>
+            </div>
+
+            <div id="connection-status" style="margin-top: 10px; color: #888;">Click above to start</div>
+        </div>
+
+        <!-- Game HUD (hidden until game starts) -->
+        <div id="game-ui" class="hidden">
+            <div id="player1-hud" class="hud">
+                <div><strong>Player 1</strong></div>
+                <div class="hp-bar"><div class="hp-fill" id="p1-hp-fill"></div></div>
+                <div id="p1-hp-text">HP: 100</div>
+                <div class="energy" id="p1-energy">Energy: 3</div>
+                <div id="p1-defend"></div>
+            </div>
+
+            <div id="player2-hud" class="hud">
+                <div><strong>Player 2</strong></div>
+                <div class="hp-bar"><div class="hp-fill" id="p2-hp-fill"></div></div>
+                <div id="p2-hp-text">HP: 100</div>
+                <div class="energy" id="p2-energy">Energy: 3</div>
+                <div id="p2-defend"></div>
+            </div>
+
+            <div id="turn-indicator" class="hud">
+                Turn: <span id="turn-number">1</span> - <span id="current-player">Player 1</span>
+            </div>
+
+            <div id="card-buttons" class="hud">
+                <button class="card-btn attack" id="btn-attack">Attack</button>
+                <button class="card-btn defend" id="btn-defend">Defend</button>
+                <button class="card-btn heal" id="btn-heal">Heal</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over">
+            <h1 id="game-result">Victory!</h1>
+            <p id="game-message">Game Over</p>
+            <button id="btn-restart">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Note: Actual game logic will be loaded via ES modules in development -->
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
