@@ -1,7 +1,7 @@
 // Main application entry point
 // Bootstraps the game and connects all modules
-// NOTE: This is Phase 1 - Local game only. 3D rendering (render.ts) will be added in Phase 2.
 
+import { initScene, renderGameState, showDamageEffect, showHealEffect } from './render';
 import { createInitialGame, playCard, endTurn, canPlayCard } from './gameModel';
 import type { GameState, CardType } from './gameModel';
 
@@ -44,6 +44,12 @@ function initApp(): void {
   
   // Setup event listeners
   setupEventListeners();
+  
+  // Initialize Babylon.js scene
+  const canvas = document.getElementById('renderCanvas');
+  if (canvas && canvas instanceof HTMLCanvasElement) {
+    initScene(canvas);
+  }
 
   // Show connection UI initially
   showConnectionUI();
@@ -103,6 +109,7 @@ function startLocalGame(playerId: 'player1' | 'player2'): void {
   
   showGameUI();
   updateUI();
+  renderGameState(gameState);
   
   uiElements.connectionStatus.textContent = `Local game started. Player 1 goes first!`;
 }
@@ -123,8 +130,16 @@ function playCardAction(cardType: CardType): void {
     // Apply the card
     gameState = playCard(gameState, myPlayerId, cardType);
     
-    // Update UI
+    // Show visual effects
+    if (cardType === 'attack') {
+      showDamageEffect(getOpponentId(myPlayerId));
+    } else if (cardType === 'heal') {
+      showHealEffect(myPlayerId);
+    }
+
+    // Update UI and render
     updateUI();
+    renderGameState(gameState);
 
     // Check if game ended
     if (gameState.gameOver) {
@@ -137,6 +152,7 @@ function playCardAction(cardType: CardType): void {
       if (gameState && !gameState.gameOver) {
         gameState = endTurn(gameState);
         updateUI();
+        renderGameState(gameState);
       }
     }, 1000);
 
@@ -243,6 +259,7 @@ function restartGame(): void {
   gameState = createInitialGame();
   showGameUI();
   updateUI();
+  renderGameState(gameState);
   uiElements.connectionStatus.textContent = 'Game restarted!';
 }
 

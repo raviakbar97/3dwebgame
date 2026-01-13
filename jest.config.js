@@ -17,7 +17,11 @@ module.exports = {
     }
   },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@babylonjs/core$': '<rootDir>/tests/__mocks__/@babylonjs/core.ts'
   },
-  // Note: Babylon.js mocking will be added in Phase 2 when render.ts is implemented
+  // Mock Babylon.js for tests since it requires WebGL
+  transformIgnorePatterns: [
+    'node_modules/(?!(babylonjs)/)'
+  ]
 };
