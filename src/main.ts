@@ -16,6 +16,8 @@ let uiElements: {
   btnHeal: HTMLButtonElement;
   btnRestart: HTMLButtonElement;
   connectionStatus: HTMLElement;
+  p1Hud: HTMLElement;
+  p2Hud: HTMLElement;
   p1HpFill: HTMLElement;
   p1HpText: HTMLElement;
   p1Energy: HTMLElement;
@@ -24,16 +26,18 @@ let uiElements: {
   p2HpText: HTMLElement;
   p2Energy: HTMLElement;
   p2Defend: HTMLElement;
+  turnIndicator: HTMLElement;
   turnNumber: HTMLElement;
   currentPlayer: HTMLElement;
   gameResult: HTMLElement;
   gameMessage: HTMLElement;
+  messageArea: HTMLElement;
+  turnTransition: HTMLElement;
 };
 
 // Game state
 let gameState: GameState | null = null;
 let isLocalGame = true; // For now, we'll do local 2-player on same device
-let myPlayerId: 'player1' | 'player2' = 'player1';
 
 /**
  * Initialize the application
@@ -69,6 +73,8 @@ function cacheUIElements(): void {
     btnHeal: document.getElementById('btn-heal') as HTMLButtonElement,
     btnRestart: document.getElementById('btn-restart') as HTMLButtonElement,
     connectionStatus: document.getElementById('connection-status')!,
+    p1Hud: document.getElementById('player1-hud')!,
+    p2Hud: document.getElementById('player2-hud')!,
     p1HpFill: document.getElementById('p1-hp-fill')!,
     p1HpText: document.getElementById('p1-hp-text')!,
     p1Energy: document.getElementById('p1-energy')!,
@@ -77,10 +83,13 @@ function cacheUIElements(): void {
     p2HpText: document.getElementById('p2-hp-text')!,
     p2Energy: document.getElementById('p2-energy')!,
     p2Defend: document.getElementById('p2-defend')!,
+    turnIndicator: document.getElementById('turn-indicator')!,
     turnNumber: document.getElementById('turn-number')!,
     currentPlayer: document.getElementById('current-player')!,
     gameResult: document.getElementById('game-result')!,
-    gameMessage: document.getElementById('game-message')!
+    gameMessage: document.getElementById('game-message')!,
+    messageArea: document.getElementById('message-area')!,
+    turnTransition: document.getElementById('turn-transition')!
   };
 }
 
@@ -89,7 +98,7 @@ function cacheUIElements(): void {
  */
 function setupEventListeners(): void {
   // Start button
-  uiElements.btnHost?.addEventListener('click', () => startLocalGame('player1'));
+  uiElements.btnHost?.addEventListener('click', () => startLocalGame());
 
   // Card buttons
   uiElements.btnAttack?.addEventListener('click', () => playCardAction('attack'));
@@ -101,17 +110,102 @@ function setupEventListeners(): void {
 }
 
 /**
+ * Show a message in the notification area
+ */
+function showMessage(text: string, type: 'success' | 'error' | 'info' = 'info', duration: number = 2000): void {
+  uiElements.messageArea.textContent = text;
+  uiElements.messageArea.className = type;
+  uiElements.messageArea.classList.add('show');
+
+  setTimeout(() => {
+    uiElements.messageArea.classList.remove('show');
+  }, duration);
+}
+
+/**
+ * Show turn transition overlay
+ */
+function showTurnTransition(playerId: 'player1' | 'player2'): void {
+  const playerName = playerId === 'player1' ? 'Player 1' : 'Player 2';
+  uiElements.turnTransition.textContent = `${playerName}'s Turn`;
+  uiElements.turnTransition.className = playerId;
+  uiElements.turnTransition.classList.add('show');
+
+  setTimeout(() => {
+    uiElements.turnTransition.classList.remove('show');
+  }, 1000);
+}
+
+/**
+ * Update active player highlighting
+ */
+function updateActivePlayerHighlight(): void {
+  if (!gameState) return;
+
+  // Remove active class from both
+  uiElements.p1Hud.classList.remove('active');
+  uiElements.p2Hud.classList.remove('active');
+
+  // Add active class to current player
+  if (gameState.currentPlayer === 'player1') {
+    uiElements.p1Hud.classList.add('active');
+    uiElements.turnIndicator.classList.add('p1-turn');
+    uiElements.turnIndicator.classList.remove('p2-turn');
+  } else {
+    uiElements.p2Hud.classList.add('active');
+    uiElements.turnIndicator.classList.add('p2-turn');
+    uiElements.turnIndicator.classList.remove('p1-turn');
+  }
+}
+
+/**
+ * Disable all card buttons
+ */
+function disableCardButtons(): void {
+  uiElements.btnAttack.disabled = true;
+  uiElements.btnDefend.disabled = true;
+  uiElements.btnHeal.disabled = true;
+}
+
+/**
+ * Enable card buttons based on game state
+ */
+function enableCardButtons(): void {
+  if (!gameState || gameState.gameOver) {
+    disableCardButtons();
+    return;
+  }
+
+  // For local 2-player, allow current player to play
+  // In Phase 4 (P2P), this would check myPlayerId
+  const currentPlayer = gameState.currentPlayer;
+  const canPlay = canPlayCard(gameState, currentPlayer, 'attack');
+  
+  uiElements.btnAttack.disabled = !canPlay;
+  uiElements.btnDefend.disabled = !canPlay;
+  uiElements.btnHeal.disabled = !canPlay;
+}
+
+/**
  * Start a local game
  */
-function startLocalGame(playerId: 'player1' | 'player2'): void {
-  myPlayerId = playerId;
+function startLocalGame(): void {
   gameState = createInitialGame();
   
   showGameUI();
   updateUI();
   renderGameState(gameState);
   
+  // Show welcome message
+  showMessage('Game Started! Player 1 begins', 'success', 3000);
+  
+  // Show turn transition
+  setTimeout(() => {
+    showTurnTransition('player1');
+  }, 500);
+  
   uiElements.connectionStatus.textContent = `Local game started. Player 1 goes first!`;
+  uiElements.connectionStatus.className = 'success';
 }
 
 /**
@@ -120,21 +214,39 @@ function startLocalGame(playerId: 'player1' | 'player2'): void {
 function playCardAction(cardType: CardType): void {
   if (!gameState || gameState.gameOver) return;
   
+  // For local 2-player, current player can play
+  // In Phase 4 (P2P), this would check myPlayerId
+  const currentPlayer = gameState.currentPlayer;
+  
   // Check if it's valid
-  if (!canPlayCard(gameState, myPlayerId, cardType)) {
-    uiElements.connectionStatus.textContent = "Not your turn or not enough energy!";
+  if (!canPlayCard(gameState, currentPlayer, cardType)) {
+    showMessage("Not your turn or not enough energy!", 'error');
     return;
   }
 
+  // Disable buttons during action
+  disableCardButtons();
+
   try {
-    // Apply the card
-    gameState = playCard(gameState, myPlayerId, cardType);
+    // Get opponent for effects
+    const opponentId = getOpponentId(currentPlayer);
     
+    // Apply the card
+    gameState = playCard(gameState, currentPlayer, cardType);
+    
+    // Show card-specific messages
+    const cardMessages = {
+      attack: `⚔️ ${currentPlayer === 'player1' ? 'Player 1' : 'Player 2'} attacks!`,
+      defend: `🛡️ ${currentPlayer === 'player1' ? 'Player 1' : 'Player 2'} defends!`,
+      heal: `💚 ${currentPlayer === 'player1' ? 'Player 1' : 'Player 2'} heals!`
+    };
+    showMessage(cardMessages[cardType], 'info');
+
     // Show visual effects
     if (cardType === 'attack') {
-      showDamageEffect(getOpponentId(myPlayerId));
+      showDamageEffect(opponentId);
     } else if (cardType === 'heal') {
-      showHealEffect(myPlayerId);
+      showHealEffect(currentPlayer);
     }
 
     // Update UI and render
@@ -143,22 +255,53 @@ function playCardAction(cardType: CardType): void {
 
     // Check if game ended
     if (gameState.gameOver) {
-      showGameOver();
+      setTimeout(() => showGameOver(), 800);
       return;
     }
 
-    // Auto-end turn after a short delay (for local play)
+    // Auto-end turn after a delay
     setTimeout(() => {
       if (gameState && !gameState.gameOver) {
-        gameState = endTurn(gameState);
-        updateUI();
-        renderGameState(gameState);
+        endTurnWithTransition();
       }
-    }, 1000);
+    }, 1200);
 
   } catch (error) {
-    uiElements.connectionStatus.textContent = `Error: ${(error as Error).message}`;
+    showMessage(`Error: ${(error as Error).message}`, 'error');
+    enableCardButtons(); // Re-enable on error
   }
+}
+
+/**
+ * End turn with transition effects
+ */
+function endTurnWithTransition(): void {
+  if (!gameState || gameState.gameOver) return;
+
+  const nextPlayer = gameState.currentPlayer === 'player1' ? 'player2' : 'player1';
+  
+  // Show turn end message
+  showMessage('Turn ending...', 'info', 800);
+  
+  // Disable buttons
+  disableCardButtons();
+  
+  // End turn
+  gameState = endTurn(gameState);
+  
+  // Update UI
+  updateUI();
+  renderGameState(gameState);
+  
+  // Show turn transition
+  setTimeout(() => {
+    showTurnTransition(nextPlayer);
+    
+    // Re-enable buttons after transition
+    setTimeout(() => {
+      enableCardButtons();
+    }, 1000);
+  }, 500);
 }
 
 /**
@@ -178,20 +321,20 @@ function updateUI(): void {
   const p1Hp = gameState.players.player1.hp;
   const p1HpPercent = Math.max(0, (p1Hp / 100) * 100);
   uiElements.p1HpFill.style.width = `${p1HpPercent}%`;
-  uiElements.p1HpText.textContent = `HP: ${p1Hp}`;
+  uiElements.p1HpText.textContent = `${p1Hp}/100`;
 
   // Player 1 Energy & Defend
-  uiElements.p1Energy.textContent = `Energy: ${gameState.players.player1.energy}`;
+  uiElements.p1Energy.textContent = `${gameState.players.player1.energy}`;
   uiElements.p1Defend.textContent = gameState.players.player1.defendActive ? '🛡️ DEFENDING' : '';
 
   // Player 2 HP
   const p2Hp = gameState.players.player2.hp;
   const p2HpPercent = Math.max(0, (p2Hp / 100) * 100);
   uiElements.p2HpFill.style.width = `${p2HpPercent}%`;
-  uiElements.p2HpText.textContent = `HP: ${p2Hp}`;
+  uiElements.p2HpText.textContent = `${p2Hp}/100`;
 
   // Player 2 Energy & Defend
-  uiElements.p2Energy.textContent = `Energy: ${gameState.players.player2.energy}`;
+  uiElements.p2Energy.textContent = `${gameState.players.player2.energy}`;
   uiElements.p2Defend.textContent = gameState.players.player2.defendActive ? '🛡️ DEFENDING' : '';
 
   // Turn info
@@ -199,18 +342,11 @@ function updateUI(): void {
   uiElements.currentPlayer.textContent = 
     gameState.currentPlayer === 'player1' ? 'Player 1' : 'Player 2';
 
-  // Update card button states
-  const canPlay = canPlayCard(gameState, myPlayerId, 'attack');
-  uiElements.btnAttack.disabled = !canPlay;
-  uiElements.btnDefend.disabled = !canPlay;
-  uiElements.btnHeal.disabled = !canPlay;
+  // Update active player highlighting
+  updateActivePlayerHighlight();
 
-  // Highlight active player's HUD
-  if (gameState.currentPlayer === myPlayerId) {
-    uiElements.currentPlayer.style.color = '#44ff44';
-  } else {
-    uiElements.currentPlayer.style.color = '#ff4444';
-  }
+  // Update card button states
+  enableCardButtons();
 }
 
 /**
@@ -220,6 +356,8 @@ function showConnectionUI(): void {
   uiElements.connectionUI.classList.remove('hidden');
   uiElements.gameUI.classList.add('hidden');
   uiElements.gameOver.classList.add('hidden');
+  uiElements.turnTransition.classList.add('hidden');
+  uiElements.messageArea.classList.remove('show');
 }
 
 /**
@@ -229,6 +367,7 @@ function showGameUI(): void {
   uiElements.connectionUI.classList.add('hidden');
   uiElements.gameUI.classList.remove('hidden');
   uiElements.gameOver.classList.add('hidden');
+  uiElements.turnTransition.classList.add('hidden');
 }
 
 /**
@@ -237,36 +376,76 @@ function showGameUI(): void {
 function showGameOver(): void {
   if (!gameState) return;
 
+  // Disable all buttons
+  disableCardButtons();
+
+  // Hide game UI
   uiElements.gameUI.classList.add('hidden');
   uiElements.gameOver.classList.remove('hidden');
 
+  // Determine result and style
+  let resultText: string;
+  let messageText: string;
+  let resultClass: string;
+
   if (gameState.winner === null) {
-    uiElements.gameResult.textContent = 'Draw!';
-    uiElements.gameMessage.textContent = 'Both players defeated each other!';
-  } else if (gameState.winner === myPlayerId) {
-    uiElements.gameResult.textContent = 'Victory!';
-    uiElements.gameMessage.textContent = 'You defeated your opponent!';
+    resultText = '🤝 DRAW!';
+    messageText = 'Both players defeated each other simultaneously!';
+    resultClass = 'draw';
   } else {
-    uiElements.gameResult.textContent = 'Defeat';
-    uiElements.gameMessage.textContent = 'Better luck next time!';
+    // For local 2-player, show winner
+    const winnerNum = gameState.winner === 'player1' ? '1' : '2';
+    resultText = `🏆 PLAYER ${winnerNum} WINS!`;
+    messageText = `Player ${winnerNum} defeated their opponent!`;
+    resultClass = 'victory';
   }
+
+  // Update content
+  uiElements.gameResult.textContent = resultText;
+  uiElements.gameMessage.textContent = messageText;
+
+  // Apply animation class
+  uiElements.gameOver.className = resultClass;
+
+  // Trigger animation
+  setTimeout(() => {
+    uiElements.gameOver.classList.add('show');
+  }, 50);
+
+  // Show message
+  showMessage(resultText, resultClass === 'victory' ? 'success' : 'error', 3000);
 }
 
 /**
  * Restart the game
  */
 function restartGame(): void {
-  gameState = createInitialGame();
-  showGameUI();
-  updateUI();
-  renderGameState(gameState);
-  uiElements.connectionStatus.textContent = 'Game restarted!';
+  // Hide game over screen with animation
+  uiElements.gameOver.classList.remove('show');
+  
+  setTimeout(() => {
+    gameState = createInitialGame();
+    showGameUI();
+    updateUI();
+    renderGameState(gameState);
+    
+    // Show restart message
+    showMessage('Game Restarted! Player 1 begins', 'success', 2000);
+    
+    // Show turn transition
+    setTimeout(() => {
+      showTurnTransition('player1');
+    }, 500);
+    
+    uiElements.connectionStatus.textContent = 'Game restarted!';
+    uiElements.connectionStatus.className = 'success';
+  }, 300);
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
+// Initialize when DOM is ready (only in browser environment)
+if (typeof window !== 'undefined' && document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
-} else {
+} else if (typeof window !== 'undefined') {
   initApp();
 }
 
